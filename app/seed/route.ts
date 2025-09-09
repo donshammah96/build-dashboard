@@ -5,6 +5,7 @@ import { invoices, customers, revenue, users } from '../lib/placeholder-data';
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
 async function seedUsers() {
+  await sql`DROP TABLE IF EXISTS users`;
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
   await sql`
     CREATE TABLE IF NOT EXISTS users (
@@ -30,6 +31,7 @@ async function seedUsers() {
 }
 
 async function seedInvoices() {
+  await sql`DROP TABLE IF EXISTS invoices`;
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
 
   await sql`
@@ -46,8 +48,7 @@ async function seedInvoices() {
     invoices.map(
       (invoice) => sql`
         INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES (${invoice.customer_id}, ${invoice.amount}, ${invoice.status}, ${invoice.date})
-        ON CONFLICT (id) DO NOTHING;
+        VALUES (${invoice.customer_id}, ${invoice.amount}, ${invoice.status}, ${invoice.date});
       `,
     ),
   );
@@ -56,6 +57,7 @@ async function seedInvoices() {
 }
 
 async function seedCustomers() {
+  await sql`DROP TABLE IF EXISTS customers`;
   await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
 
   await sql`
@@ -81,6 +83,7 @@ async function seedCustomers() {
 }
 
 async function seedRevenue() {
+  await sql`DROP TABLE IF EXISTS revenue`;
   await sql`
     CREATE TABLE IF NOT EXISTS revenue (
       month VARCHAR(4) NOT NULL UNIQUE,
@@ -103,12 +106,12 @@ async function seedRevenue() {
 
 export async function GET() {
   try {
-    const result = await sql.begin((sql) => [
-      seedUsers(),
-      seedCustomers(),
-      seedInvoices(),
-      seedRevenue(),
-    ]);
+    const result = await sql.begin(async (sql) => {
+      await seedUsers();
+      await seedCustomers();
+      await seedInvoices();
+      await seedRevenue();
+    });
 
     return Response.json({ message: 'Database seeded successfully' });
   } catch (error) {
