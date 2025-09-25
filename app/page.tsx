@@ -1,7 +1,12 @@
 import Image from 'next/image';
 import { oxygen } from './ui/fonts';
 import GoogleSignIn from './ui/GoogleSignIn';
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import InfoCard from './ui/InfoCard';
+import { CardGridSkeleton } from './ui/skeletons';
+import { ROUTES } from './lib/links';
+import NavLinks from './ui/nav-links';
 
 type CardItem = {
   title: string;
@@ -12,53 +17,137 @@ type CardItem = {
 };
 
 const WHATS_ON: readonly CardItem[] = [
-  { title: 'Idea Books', description: 'Browse idea books to find inspiration', imageSrc: '/blueprint.png', imageAlt: 'Idea books cover' },
-  { title: 'Find a Professional', description: 'Find a professional for your specific needs.', imageSrc: '/professional.png', imageAlt: 'Professional services' },
-  { title: 'Speak with an Advisor', description: 'Contact a knowledgeable guide.', imageSrc: '/contact1.png', imageAlt: 'Advisor support' },
+  { 
+    title: 'Idea Books', 
+    description: '', 
+    imageSrc: '/blueprint.png', 
+    imageAlt: 'Idea books cover',
+    href: ROUTES.ideaBooks
+
+  },
+  { 
+    title: 'Find a Professional', 
+    description: '', 
+    imageSrc: '/professional.png', 
+    imageAlt: 'Professional services',
+    href: ROUTES.findProfessional
+  },
+  { 
+    title: 'Speak with an Advisor', 
+    description: '', 
+    imageSrc: '/contact1.png', 
+    imageAlt: 'Advisor support',
+    href: ROUTES.speakWithAdvisor
+  },
 ] as const;
 
 const VENDORS: readonly CardItem[] = [
-  { title: 'Hardware Shops', description: 'Find hardware shops near you.', imageSrc: '/hardware2.png', imageAlt: 'Hardware store aisle' },
-  { title: 'Commercial Stores', description: 'Find specialty stores to suit your specific project needs.', imageSrc: '/hardware.png', imageAlt: 'Commercial storefronts' },
+  { 
+    title: 'Tiles and Bathrooms', 
+    description: '', 
+    imageSrc: '/tiles.png', 
+    imageAlt: 'Tiles and Bathrooms',
+    href: ROUTES.hardwareShops
+  },
+  { 
+    title: 'Flooring', 
+    description: '', 
+    imageSrc: '/flooring.png', 
+    imageAlt: 'Flooring',
+    href: ROUTES.commercialStores
+  },
+  {
+    title: 'Cabinets', 
+    description: '', 
+    imageSrc: '/cabinet.png', 
+    imageAlt: 'Cabinets',
+    href: ROUTES.cabinets
+  },
+  {
+    title: 'Furniture', 
+    description: '', 
+    imageSrc: '/furniture.png', 
+    imageAlt: 'Furniture',
+    href: ROUTES.furniture
+  },
+  {
+    title: 'Electrical and Lighting', 
+    description: '', 
+    imageSrc: '/lighting.png', 
+    imageAlt: 'Electrical and Lighting',
+    href: ROUTES.electricalAndLighting
+  },
+  {
+    title: 'Plumbing', 
+    description: '', 
+    imageSrc: '/plumbing.png', 
+    imageAlt: 'Plumbing',
+    href: ROUTES.plumbing
+  },
+  {
+    title: 'Paint and Wallpapers', 
+    description: '', 
+    imageSrc: '/paint.png', 
+    imageAlt: 'Paint and Wallpapers',
+    href: ROUTES.paintAndWallpapers
+  },
+  {
+    title: 'Kitchen Fixtures', 
+    description: '', 
+    imageSrc: '/kitchen-fixtures.png', 
+    imageAlt: 'Kitchen Fixtures',
+    href: ROUTES.flooringAndTile
+  }
 ] as const;
 
 const PROFESSIONALS: readonly CardItem[] = [
-  { title: 'Engineers', description: 'Find NCA registered engineers near you.', imageSrc: '/engineers.png', imageAlt: 'Engineers at work' },
-  { title: 'Designers', description: 'Find accredited designers near you.', imageSrc: '/design.png', imageAlt: 'Design sketches' },
-  { title: 'Architects', description: 'Find accredited architects near you.', imageSrc: '/architect.png', imageAlt: 'Architectural plans' },
+  {
+    title: 'General Contractors', 
+    description: '', 
+    imageSrc: '/contractor.png', 
+    imageAlt: 'General Contractors',
+    href: ROUTES.generalContractors
+  },
+  { 
+    title: 'Engineers', 
+    description: '', 
+    imageSrc: '/engineers.png', 
+    imageAlt: 'Engineers at work',
+    href: ROUTES.engineers
+  },
+  { 
+    title: 'Designers', 
+    description: '', 
+    imageSrc: '/design.png', 
+    imageAlt: 'Design sketches',
+    href: ROUTES.designers
+  },
+  { 
+    title: 'Architects', 
+    description: '', 
+    imageSrc: '/architect.png', 
+    imageAlt: 'Architectural plans',
+    href: ROUTES.architects
+  },
 ] as const;
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="px-6 md:px-20 py-12">
-      <h2 className="text-2xl md:text-5xl font-bold text-black mb-8">{title}</h2>
+      <h2 className="text-2xl md:text-2xl font-bold text-black mb-4">{title}</h2>
       {children}
     </section>
   );
 }
 
-function CardGrid({ items, colsMd = 3 }: { items: readonly CardItem[]; colsMd?: 2 | 3 }) {
-  return (
-    <div className={`grid grid-cols-3 md:grid-cols-${colsMd} gap-8`}>
-      {items.map((item) => (
-        <InfoCard
-          key={item.title}
-          title={item.title}
-          description={item.description}
-          imageSrc={item.imageSrc}
-          imageAlt={item.imageAlt}
-          href={item.href}
-          sizes={colsMd === 2 ? '(min-width: 768px) 50vw, 100vw' : '(min-width: 768px) 33vw, 100vw'}
-          priority={false}
-        />
-      ))}
-    </div>
-  );
-}
+const HomeCardGrid = dynamic(() => import('./ui/home-card-grid'), {
+  loading: () => <CardGridSkeleton count={3} colsMd={3} />,
+  ssr: true,
+});
 
 export default function Page() {
-  // Server Component: avoid calling client-only functions like getProviders here.
 
+  
   return (
     <main className="flex min-h-screen flex-col p-6">
       <div className="mt-4 relative h-[500px] md:h-[600px] rounded-lg overflow-hidden">
@@ -96,18 +185,22 @@ export default function Page() {
         </div>
       </div>
       <Section title="What’s on Build Market">
-        <CardGrid items={WHATS_ON} colsMd={3} />
+        <Suspense fallback={<CardGridSkeleton count={3} colsMd={3} />}>
+          <HomeCardGrid items={WHATS_ON} colsMd={3} />
+        </Suspense>
       </Section>
 
       <Section title="Browse Professionals Near You">
-        <CardGrid items={PROFESSIONALS} colsMd={3} />
+        <Suspense fallback={<CardGridSkeleton count={3} colsMd={3} />}>
+          <HomeCardGrid items={PROFESSIONALS} colsMd={3} />
+        </Suspense>
       </Section>
 
       <Section title="Browse Vendors Near You">
-        <CardGrid items={VENDORS} colsMd={2} />
+        <Suspense fallback={<CardGridSkeleton count={2} colsMd={2} />}>
+          <HomeCardGrid items={VENDORS} colsMd={2} />
+        </Suspense>
       </Section>
-
-      
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { oxygen } from './ui/fonts';
 import { Metadata } from 'next';
 import Header from './ui/header';
 import Footer from './ui/footer';
+import SideNav from './ui/sidenav';
 
 export const metadata: Metadata = {
   title: 'Build Market',
@@ -44,7 +45,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${oxygen.className} antialiased`}>
         <Header />
-        <main>{children}</main>
+          <main>{children}</main>
         <Footer />
       </body>
     </html>

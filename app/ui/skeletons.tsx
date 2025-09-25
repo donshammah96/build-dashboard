@@ -102,6 +102,24 @@ export default function DashboardSkeleton() {
   );
 }
 
+// Home page card grid skeleton
+export function CardGridSkeleton({ count, colsMd = 3 }: { count: number; colsMd?: 2 | 3 }) {
+  return (
+    <div className={`grid grid-cols-3 md:grid-cols-${colsMd} gap-8`}>
+      {Array.from({ length: count }).map((_, idx) => (
+        <div key={idx} className={`${shimmer} relative overflow-hidden rounded-xl bg-gray-100`}>
+          <div className="aspect-[4/3] w-full bg-white" />
+          <div className="p-4 space-y-3">
+            <div className="h-6 w-1/2 rounded-md bg-gray-200" />
+            <div className="h-4 w-3/4 rounded-md bg-gray-200" />
+            <div className="h-4 w-2/3 rounded-md bg-gray-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TableRowSkeleton() {
   return (
     <tr className="w-full border-b border-gray-100 last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg">
