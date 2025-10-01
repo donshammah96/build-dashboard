@@ -160,7 +160,7 @@ async function seedProfessionalSpecialties() {
     CREATE TABLE IF NOT EXISTS professional_specialties (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
       professional_id UUID NOT NULL REFERENCES professionals(id) ON DELETE CASCADE,
-      specialty_type VARCHAR(255) NOT NULL CHECK (specialty_type IN ('hardware', 'commercial', 'residential', 'industrial', 'Kitchen Remodeling', 'construction', 'engineering', 'design', 'architecture', 'planning', 'consulting','electrical', 'plumbing', 'painting', 'flooring', 'roofing', 'other')),
+      specialty_type VARCHAR(255) NOT NULL CHECK (specialty_type IN ('hardware', 'commercial', 'residential', 'industrial', 'kitchen remodeling', 'construction', 'engineering', 'design', 'architecture', 'planning', 'consulting', 'electrical', 'plumbing', 'painting', 'flooring', 'roofing', 'other')),
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     );
