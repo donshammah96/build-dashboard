@@ -71,7 +71,6 @@ export type ClientsTableType = {
   project_budget_preference_currency: string;
   project_budget_preference_currency_symbol: string;
   project_budget_preference_currency_symbol_position: string;
-  project_budget_preference_currency_symbol_position_position: string;
   created_at: string;
   updated_at: string;
   last_login_at: string;
@@ -147,7 +146,6 @@ export type ProfessionalsTableType = {
   completed_projects_value_currency: string;
   completed_projects_value_currency_symbol: string;
   completed_projects_value_currency_symbol_position: string;
-  completed_projects_value_currency_symbol_position_position: string;
   subscription_tier: string;
   subscription_tier_expiration_date: string;
   is_profile_complete: boolean;

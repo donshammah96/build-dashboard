@@ -47,7 +47,7 @@ export async function fetchLatestInvoices() {
       ORDER BY invoices.date DESC
       LIMIT 5`;
 
-    const latestInvoices = data.map((invoice) => ({
+    const latestInvoices = data.map((invoice: LatestInvoiceRaw) => ({
       ...invoice,
       amount: formatCurrency(invoice.amount),
     }));
@@ -173,7 +173,7 @@ export async function fetchInvoiceById(id: string) {
       WHERE invoices.id = ${id};
     `;
 
-    const invoice = data.map((invoice) => ({
+    const invoice = data.map((invoice: InvoiceForm) => ({
       ...invoice,
       // Convert amount from cents to dollars
       amount: invoice.amount / 100,
@@ -225,7 +225,7 @@ export async function fetchFilteredCustomers(query: string) {
 		ORDER BY customers.name ASC
 	  `;
 
-    const customers = data.map((customer) => ({
+    const customers = data.map((customer: CustomersTableType) => ({
       ...customer,
       total_pending: formatCurrency(customer.total_pending),
       total_paid: formatCurrency(customer.total_paid),
@@ -282,7 +282,6 @@ export async function fetchFilteredClients(query: string) {
         clients.project_budget_preference_currency,
         clients.project_budget_preference_currency_symbol,
         clients.project_budget_preference_currency_symbol_position,
-        clients.project_budget_preference_currency_symbol_position_position,
         clients.created_at,
         clients.updated_at,
         clients.last_login_at,
@@ -301,11 +300,11 @@ export async function fetchFilteredClients(query: string) {
                clients.default_address_longitude, clients.contact_preference, clients.project_budget_preference_min,
                clients.project_budget_preference_max, clients.project_budget_preference_currency,
                clients.project_budget_preference_currency_symbol, clients.project_budget_preference_currency_symbol_position,
-               clients.project_budget_preference_currency_symbol_position_position, clients.created_at, clients.updated_at, clients.last_login_at
+               clients.created_at, clients.updated_at, clients.last_login_at
       ORDER BY clients.first_name ASC
     `;
 
-    const clients = data.map((client) => ({
+    const clients = data.map((client: ClientsTableType) => ({
       ...client,
       total_pending: formatCurrency(client.total_pending),
       total_paid: formatCurrency(client.total_paid),
@@ -375,7 +374,6 @@ export async function fetchFilteredProfessionals(query: string) {
         professionals.completed_projects_value_currency,
         professionals.completed_projects_value_currency_symbol,
         professionals.completed_projects_value_currency_symbol_position,
-        professionals.completed_projects_value_currency_symbol_position_position,
         professionals.subscription_tier,
         professionals.subscription_tier_expiration_date,
         professionals.is_profile_complete,
