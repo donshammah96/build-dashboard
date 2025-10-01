@@ -18,6 +18,7 @@ export const authConfig = {
       return true;
     },
     jwt({ token, user }) {
+      // Store user data in JWT token when user signs in
       if (user) {
         token.id = user.id;
         token.image = user.image;
@@ -25,6 +26,7 @@ export const authConfig = {
       return token;
     },
     session({ session, token }) {
+      // Pass user data from JWT token to session
       if (token) {
         session.user.id = token.id as string;
         session.user.image = token.image as string;

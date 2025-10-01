@@ -1,6 +1,14 @@
 import { Revenue } from './definitions';
 
-export const formatCurrency = (amount: number) => {
+export const formatCurrency = (amount: number, currency: string = 'KES', locale: string = 'en-KE') => {
+  return (amount / 100).toLocaleString(locale, {
+    style: 'currency',
+    currency: currency,
+  });
+};
+
+// Legacy function for backward compatibility
+export const formatCurrencyUSD = (amount: number) => {
   return (amount / 100).toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',

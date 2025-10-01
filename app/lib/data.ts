@@ -1,26 +1,21 @@
-import postgres from 'postgres';
 import {
   CustomerField,
   CustomersTableType,
+  ClientField,
+  ClientsTableType,
+  ProfessionalField,
+  ProfessionalsTableType,
+  ClientInvoiceTable,
+  ProfessionalInvoiceTable,
+  ProfessionalInvoice,
+  ClientInvoice,
   InvoiceForm,
   InvoicesTable,
   LatestInvoiceRaw,
   Revenue,
 } from './definitions';
 import { formatCurrency } from './utils';
-
-let sql: ReturnType<typeof postgres> | null = null;
-
-function getSqlClient() {
-  const connectionString = process.env.POSTGRES_URL;
-  if (!connectionString) {
-    throw new Error('POSTGRES_URL is not set');
-  }
-  if (!sql) {
-    sql = postgres(connectionString, { ssl: 'require' });
-  }
-  return sql;
-}
+import { getSqlClient } from './db';
 
 export async function fetchRevenue() {
   try {
@@ -52,7 +47,7 @@ export async function fetchLatestInvoices() {
       ORDER BY invoices.date DESC
       LIMIT 5`;
 
-    const latestInvoices = data.map((invoice) => ({
+    const latestInvoices = data.map((invoice: LatestInvoiceRaw) => ({
       ...invoice,
       amount: formatCurrency(invoice.amount),
     }));
@@ -71,6 +66,8 @@ export async function fetchCardData() {
     const db = getSqlClient();
     const invoiceCountPromise = db`SELECT COUNT(*) FROM invoices`;
     const customerCountPromise = db`SELECT COUNT(*) FROM customers`;
+    const clientCountPromise = db`SELECT COUNT(*) FROM clients`;
+    const professionalCountPromise = db`SELECT COUNT(*) FROM professionals`;
     const invoiceStatusPromise = db`SELECT
          SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
@@ -79,19 +76,24 @@ export async function fetchCardData() {
     const data = await Promise.all([
       invoiceCountPromise,
       customerCountPromise,
+      clientCountPromise,
+      professionalCountPromise,
       invoiceStatusPromise,
     ]);
 
     const numberOfInvoices = Number(data[0][0].count ?? '0');
     const numberOfCustomers = Number(data[1][0].count ?? '0');
-    const totalPaidInvoices = formatCurrency(data[2][0].paid ?? '0');
-    const totalPendingInvoices = formatCurrency(data[2][0].pending ?? '0');
-
+    const numberOfClients = Number(data[2][0].count ?? '0');
+    const numberOfProfessionals = Number(data[3][0].count ?? '0');
+    const totalPaidInvoices = formatCurrency(data[4][0].paid ?? '0');
+    const totalPendingInvoices = formatCurrency(data[4][0].pending ?? '0');
     return {
       numberOfCustomers,
       numberOfInvoices,
       totalPaidInvoices,
       totalPendingInvoices,
+      numberOfClients,
+      numberOfProfessionals,
     };
   } catch (error) {
     console.error('Database Error:', error);
@@ -171,7 +173,7 @@ export async function fetchInvoiceById(id: string) {
       WHERE invoices.id = ${id};
     `;
 
-    const invoice = data.map((invoice) => ({
+    const invoice = data.map((invoice: InvoiceForm) => ({
       ...invoice,
       // Convert amount from cents to dollars
       amount: invoice.amount / 100,
@@ -223,7 +225,7 @@ export async function fetchFilteredCustomers(query: string) {
 		ORDER BY customers.name ASC
 	  `;
 
-    const customers = data.map((customer) => ({
+    const customers = data.map((customer: CustomersTableType) => ({
       ...customer,
       total_pending: formatCurrency(customer.total_pending),
       total_paid: formatCurrency(customer.total_paid),
@@ -233,5 +235,317 @@ export async function fetchFilteredCustomers(query: string) {
   } catch (err) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch customer table.');
+  }
+}
+
+export async function fetchClients() {
+  try {
+    const db = getSqlClient();
+    const clients = await db<ClientField[]>`
+      SELECT
+        id,
+        first_name,
+        last_name,
+        email,
+        image_url
+      FROM clients
+      ORDER BY first_name ASC
+    `;
+    return clients;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch all clients.');
+  }
+}
+
+export async function fetchFilteredClients(query: string) {
+  try {
+    const db = getSqlClient();
+    const data = await db<ClientsTableType[]>`
+      SELECT
+        clients.id,
+        clients.user_id,
+        clients.first_name,
+        clients.last_name,
+        clients.email,
+        clients.image_url,
+        clients.default_address_street,
+        clients.default_address_city,
+        clients.default_address_county,
+        clients.default_address_zip,
+        clients.default_address_country,
+        clients.default_address_latitude,
+        clients.default_address_longitude,
+        clients.contact_preference,
+        clients.project_budget_preference_min,
+        clients.project_budget_preference_max,
+        clients.project_budget_preference_currency,
+        clients.project_budget_preference_currency_symbol,
+        clients.project_budget_preference_currency_symbol_position,
+        clients.created_at,
+        clients.updated_at,
+        clients.last_login_at,
+        COUNT(client_invoices.id) AS total_invoices,
+        SUM(CASE WHEN client_invoices.status = 'pending' THEN client_invoices.amount ELSE 0 END) AS total_pending,
+        SUM(CASE WHEN client_invoices.status = 'paid' THEN client_invoices.amount ELSE 0 END) AS total_paid
+      FROM clients
+      LEFT JOIN client_invoices ON clients.id = client_invoices.client_id
+      WHERE 
+        clients.first_name ILIKE ${`%${query}%`} OR 
+        clients.last_name ILIKE ${`%${query}%`} OR 
+        clients.email ILIKE ${`%${query}%`}
+      GROUP BY clients.id, clients.user_id, clients.first_name, clients.last_name, clients.email, clients.image_url,
+               clients.default_address_street, clients.default_address_city, clients.default_address_county,
+               clients.default_address_zip, clients.default_address_country, clients.default_address_latitude,
+               clients.default_address_longitude, clients.contact_preference, clients.project_budget_preference_min,
+               clients.project_budget_preference_max, clients.project_budget_preference_currency,
+               clients.project_budget_preference_currency_symbol, clients.project_budget_preference_currency_symbol_position,
+               clients.created_at, clients.updated_at, clients.last_login_at
+      ORDER BY clients.first_name ASC
+    `;
+
+    const clients = data.map((client: ClientsTableType) => ({
+      ...client,
+      total_pending: formatCurrency(client.total_pending),
+      total_paid: formatCurrency(client.total_paid),
+    }));
+    return clients;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch client table.');
+  }
+}
+
+export async function fetchProfessionals() {
+  try {
+    const db = getSqlClient();
+    const professionals = await db<ProfessionalField[]>`
+      SELECT
+        id,
+        business_name,
+        business_email,
+        business_description
+      FROM professionals
+      ORDER BY business_name ASC
+    `;
+    return professionals;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch all professionals.');
+  }
+}
+
+export async function fetchFilteredProfessionals(query: string) {
+  try {
+    const db = getSqlClient();
+    const data = await db<ProfessionalsTableType[]>`
+      SELECT
+        professionals.id,
+        professionals.user_id,
+        professionals.business_name,
+        professionals.business_email,
+        professionals.business_description,
+        professionals.image_url,
+        professionals.years_of_experience,
+        professionals.business_license_number,
+        professionals.license_issuing_county,
+        professionals.status,
+        professionals.verified_at,
+        professionals.verified_by,
+        professionals.business_address_street,
+        professionals.business_address_city,
+        professionals.business_address_county,
+        professionals.business_address_zip,
+        professionals.business_address_country,
+        professionals.business_address_latitude,
+        professionals.business_address_longitude,
+        professionals.service_radius_kilometers,
+        professionals.serves_remote,
+        professionals.accepts_credit_cards,
+        professionals.accepts_cash,
+        professionals.accepts_mpesa,
+        professionals.accepts_apple_pay,
+        professionals.accepts_google_pay,
+        professionals.accepts_bank_transfer,
+        professionals.average_rating,
+        professionals.total_reviews,
+        professionals.completed_projects,
+        professionals.completed_projects_value,
+        professionals.completed_projects_value_currency,
+        professionals.completed_projects_value_currency_symbol,
+        professionals.completed_projects_value_currency_symbol_position,
+        professionals.subscription_tier,
+        professionals.subscription_tier_expiration_date,
+        professionals.is_profile_complete,
+        professionals.profile_completed_at,
+        professionals.created_at,
+        professionals.updated_at,
+        professionals.last_login_at
+      FROM professionals
+      WHERE 
+        professionals.business_name ILIKE ${`%${query}%`} OR 
+        professionals.business_email ILIKE ${`%${query}%`} OR
+        professionals.business_description ILIKE ${`%${query}%`}
+      ORDER BY professionals.business_name ASC
+    `;
+
+    return data;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch professional table.');
+  }
+}
+
+export async function fetchProfessionalInvoices() {
+  try {
+    const db = getSqlClient();
+    const professionalInvoices = await db<ProfessionalInvoice[]>`
+      SELECT
+        professional_invoices.id,
+        professional_invoices.professional_id,
+        professional_invoices.amount,
+        professional_invoices.status,
+        professional_invoices.date
+      FROM professional_invoices
+      ORDER BY professional_invoices.date DESC
+    `;
+    return professionalInvoices;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch professional invoices.');
+  }
+}
+
+export async function fetchClientInvoices() {
+  try {
+    const db = getSqlClient();
+    const clientInvoices = await db<ClientInvoice[]>`
+      SELECT
+        client_invoices.id,
+        client_invoices.client_id,
+        client_invoices.amount,
+        client_invoices.status,
+        client_invoices.date
+      FROM client_invoices
+      ORDER BY client_invoices.date DESC
+    `;
+    return clientInvoices;
+  } catch (err) {
+    console.error('Database Error:', err);
+    throw new Error('Failed to fetch client invoices.');
+  }
+}
+
+export async function fetchFilteredClientInvoices(
+  query: string,
+  currentPage: number,
+) {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  try {
+    const db = getSqlClient();
+    const invoices = await db<ClientInvoice[]>`
+      SELECT
+        client_invoices.id,
+        client_invoices.client_id,
+        client_invoices.amount,
+        client_invoices.date,
+        client_invoices.status
+      FROM client_invoices
+      JOIN clients ON client_invoices.client_id = clients.id
+      WHERE
+        clients.first_name ILIKE ${`%${query}%`} OR
+        clients.last_name ILIKE ${`%${query}%`} OR
+        clients.email ILIKE ${`%${query}%`} OR
+        client_invoices.amount::text ILIKE ${`%${query}%`} OR
+        client_invoices.date::text ILIKE ${`%${query}%`} OR
+        client_invoices.status ILIKE ${`%${query}%`}
+      ORDER BY client_invoices.date DESC
+      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
+    `;
+
+    return invoices;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch client invoices.');
+  }
+}
+
+export async function fetchFilteredProfessionalInvoices(
+  query: string,
+  currentPage: number,
+) {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  try {
+    const db = getSqlClient();
+    const invoices = await db<ProfessionalInvoice[]>`
+      SELECT
+        professional_invoices.id,
+        professional_invoices.professional_id,
+        professional_invoices.amount,
+        professional_invoices.date,
+        professional_invoices.status
+      FROM professional_invoices
+      JOIN professionals ON professional_invoices.professional_id = professionals.id
+      WHERE
+        professionals.business_name ILIKE ${`%${query}%`} OR
+        professionals.business_email ILIKE ${`%${query}%`} OR
+        professional_invoices.amount::text ILIKE ${`%${query}%`} OR
+        professional_invoices.date::text ILIKE ${`%${query}%`} OR
+        professional_invoices.status ILIKE ${`%${query}%`}
+      ORDER BY professional_invoices.date DESC
+      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
+    `;
+
+    return invoices;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch professional invoices.');
+  }
+}
+
+export async function fetchClientInvoicesPages(query: string) {
+  try {
+    const db = getSqlClient();
+    const data = await db`SELECT COUNT(*)
+    FROM client_invoices
+    JOIN clients ON client_invoices.client_id = clients.id
+    WHERE
+      clients.first_name ILIKE ${`%${query}%`} OR
+      clients.last_name ILIKE ${`%${query}%`} OR
+      clients.email ILIKE ${`%${query}%`} OR
+      client_invoices.amount::text ILIKE ${`%${query}%`} OR
+      client_invoices.date::text ILIKE ${`%${query}%`} OR
+      client_invoices.status ILIKE ${`%${query}%`}
+  `;
+
+    const totalPages = Math.ceil(Number(data[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total number of client invoices.');
+  }
+}
+
+export async function fetchProfessionalInvoicesPages(query: string) {
+  try {
+    const db = getSqlClient();
+    const data = await db`SELECT COUNT(*)
+    FROM professional_invoices
+    JOIN professionals ON professional_invoices.professional_id = professionals.id
+    WHERE
+      professionals.business_name ILIKE ${`%${query}%`} OR
+      professionals.business_email ILIKE ${`%${query}%`} OR
+      professional_invoices.amount::text ILIKE ${`%${query}%`} OR
+      professional_invoices.date::text ILIKE ${`%${query}%`} OR
+      professional_invoices.status ILIKE ${`%${query}%`}
+  `;
+
+    const totalPages = Math.ceil(Number(data[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total number of professional invoices.');
   }
 }
