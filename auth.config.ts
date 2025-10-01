@@ -27,11 +27,9 @@ export const authConfig = {
     },
     session({ session, token }) {
       // Pass user data from JWT token to session
-      if (token && session.user) {
+      if (token) {
         session.user.id = token.id as string;
-        if (token.image) {
-          session.user.image = token.image as string;
-        }
+        session.user.image = token.image as string;
       }
       return session;
     }
