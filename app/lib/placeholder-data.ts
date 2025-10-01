@@ -329,7 +329,7 @@ const professional_specialties = [
   {
     id: '410544b2-4001-4271-9855-fec4b6a6442b',
     professional_id: '410544b2-4001-4271-9855-fec4b6a6442b',
-    specialty_type: 'Architectural',
+    specialty_type: 'architecture',
     description: 'Architectural',
     created_at: new Date(),
     updated_at: new Date(),
