@@ -17,13 +17,19 @@ export const authConfig = {
       }
       return true;
     },
-    session({ session, user}): Promise<Session> {
-      if (session.user && user.id && user.image) {
-        session.user.id = user.id;
-        session.user.image = user.image;
-        return Promise.resolve(session);
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.image = user.image;
       }
-      return Promise.resolve(session);
+      return token;
+    },
+    session({ session, token }) {
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.image = token.image as string;
+      }
+      return session;
     }
   },
   providers: [],
